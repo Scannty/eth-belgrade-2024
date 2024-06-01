@@ -1,4 +1,4 @@
-# This file is used for building and pushing images
+version: "3"
 services:
   node:
     build:
@@ -10,3 +10,8 @@ services:
       context: .
       dockerfile: plugin.Dockerfile
     image: ghcr.io/layr-labs/incredible-squaring-avs/nodeplugin:latest
+  aggregator:
+    build:
+      context: .
+      dockerfile: aggregator.dockerfile
+    image: ghcr.io/layr-labs/incredible-squaring/aggregator:latest
