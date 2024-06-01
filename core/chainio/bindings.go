@@ -12,6 +12,7 @@ import (
 	erc20mock "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/ERC20Mock"
 	csservicemanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringServiceManager"
 	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	wbtc "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/WBTC"
 )
 
 type AvsManagersBindings struct {
@@ -63,4 +64,13 @@ func (b *AvsManagersBindings) GetErc20Mock(tokenAddr common.Address) (*erc20mock
 		return nil, err
 	}
 	return contractErc20Mock, nil
+}
+
+func (b *AvsManagersBindings) GetWBTC(wbtcAddr common.Address) (*wbtc.ContractWBTC, error) {
+	wbtc, err := wbtc.NewContractWBTC(wbtcAddr, b.ethClient)
+	if err != nil {
+		b.logger.Error("Failed to fetch ERC20Mock contract", "err", err)
+		return nil, err
+	}
+	return wbtc, nil
 }
