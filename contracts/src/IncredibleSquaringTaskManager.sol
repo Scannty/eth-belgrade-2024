@@ -53,12 +53,12 @@ contract IncredibleSquaringTaskManager is
         _;
     }
 
-    // onlyTaskGenerator is used to restrict createNewTask from only being called by a permissioned entity
-    // in a real world scenario, this would be removed by instead making createNewTask a payable function
-    modifier onlyTaskGenerator() {
-        require(msg.sender == generator, "Task generator must be the caller");
-        _;
-    }
+    // // onlyTaskGenerator is used to restrict createNewTask from only being called by a permissioned entity
+    // // in a real world scenario, this would be removed by instead making createNewTask a payable function
+    // modifier onlyTaskGenerator() {
+    //     require(msg.sender == generator, "Task generator must be the caller");
+    //     _;
+    // }
 
     constructor(
         IRegistryCoordinator _registryCoordinator,
@@ -91,7 +91,7 @@ contract IncredibleSquaringTaskManager is
         uint256 amount,
         uint32 quorumThresholdPercentage,
         bytes calldata quorumNumbers
-    ) external onlyTaskGenerator {
+    ) external {
         // create a new task struct
         Task memory newTask;
         newTask.destAddress = destAddress;
@@ -110,7 +110,7 @@ contract IncredibleSquaringTaskManager is
         Task calldata task,
         TaskResponse calldata taskResponse,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    ) external onlyAggregator {
+    ) external {
         uint32 taskCreatedBlock = task.taskCreatedBlock;
         bytes calldata quorumNumbers = task.quorumNumbers;
         uint32 quorumThresholdPercentage = task.quorumThresholdPercentage;
