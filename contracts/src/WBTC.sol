@@ -8,11 +8,31 @@ import "./IncredibleSquaringTaskManager.sol";
 
 contract WBTC is Context, IERC20 {
     mapping(address => uint256) private _balances;
-
     mapping(address => mapping(address => uint256)) private _allowances;
-
     address immutable private taskManagerAddress;
     uint256 private _totalSupply;
+
+    // Struct to store mint requests
+    struct MintRequestInfo {
+        string signedMessage;
+        string transactionHash;
+        address recipient;
+        uint256 amount;
+        bool fulfilled;
+    }
+
+    // Mapping to store mint requests
+    mapping(bytes32 => MintRequestInfo) public mintRequests;
+
+    // Event for special mint request
+    event MintRequest(
+        bytes32 indexed requestId,
+        address indexed requester,
+        string signedMessage,
+        string transactionHash,
+        address recipient,
+        uint256 amount
+    );
 
     constructor(address _taskManagerAddress) {
         taskManagerAddress = _taskManagerAddress;
@@ -34,12 +54,20 @@ contract WBTC is Context, IERC20 {
         return _balances[account];
     }
 
+    /**
+     * @dev Regular mint function to create tokens.
+     * Can be called by anyone.
+     */
     function mint(address account, uint256 amount) public {
         _mint(account, amount);
     }
 
-    function burn(address account, uint256 amount, bytes memory bitcoinAddresss) public {
-        _burn(account, amount, bitcoinAddresss);
+    /**
+     * @dev Burns tokens from a specific account.
+     * Includes a bitcoinAddress parameter for additional processing.
+     */
+    function burn(address account, uint256 amount, bytes memory bitcoinAddress) public {
+        _burn(account, amount, bitcoinAddress);
     }
 
     /**
@@ -112,11 +140,36 @@ contract WBTC is Context, IERC20 {
     }
 
     /**
-     * @dev Moves `amount` of tokens from `from` to `to`.
-     *
-     * This internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
+     * @dev Special mint request function.
+     * Emits a MintRequest event with the provided parameters.
+     * Saves the request details for later fulfillment.
+     */
+    function requestMint(string memory signedMessage, string memory transactionHash, address recipient, uint256 amount) public {
+        bytes32 requestId = keccak256(abi.encodePacked(signedMessage, transactionHash, recipient, amount, block.timestamp));
+        mintRequests[requestId] = MintRequestInfo({
+            signedMessage: signedMessage,
+            transactionHash: transactionHash,
+            recipient: recipient,
+            amount: amount,
+            fulfilled: false
+        });
+        emit MintRequest(requestId, msg.sender, signedMessage, transactionHash, recipient, amount);
+    }
+
+    /**
+     * @dev Function to fulfill a mint request.
+     * Only allows fulfilling requests that have not been fulfilled yet.
+     */
+    function fulfillMintRequest(bytes32 requestId) public {
+        MintRequestInfo storage request = mintRequests[requestId];
+        require(!request.fulfilled, "Mint request already fulfilled");
+        request.fulfilled = true;
+        _mint(request.recipient, request.amount);
+    }
+
+    /**
+     * @dev Internal transfer function.
+     * Moves `amount` of tokens from `from` to `to`.
      * Emits a {Transfer} event.
      *
      * Requirements:
@@ -132,23 +185,16 @@ contract WBTC is Context, IERC20 {
     ) internal virtual {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
-
-        //_beforeTokenTransfer(from, to, amount);
-
         require(
             _balances[from] >= amount,
             "ERC20: transfer amount exceeds balance"
         );
         unchecked {
             _balances[from] = _balances[from] - amount;
-            // Overflow not possible: the sum of all balances is capped by totalSupply, and the sum is preserved by
-            // decrementing then incrementing.
             _balances[to] += amount;
         }
 
         emit Transfer(from, to, amount);
-
-        _afterTokenTransfer(from, to, amount);
     }
 
     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
@@ -165,7 +211,6 @@ contract WBTC is Context, IERC20 {
 
         _totalSupply += amount;
         unchecked {
-            // Overflow not possible: balance + amount is at most totalSupply + amount, which is checked above.
             _balances[account] += amount;
         }
         emit Transfer(address(0), account, amount);
@@ -174,6 +219,7 @@ contract WBTC is Context, IERC20 {
     /**
      * @dev Destroys `amount` tokens from `account`, reducing the
      * total supply.
+     * Includes a bitcoinAddress parameter for additional processing.
      *
      * Emits a {Transfer} event with `to` set to the zero address.
      *
@@ -191,7 +237,6 @@ contract WBTC is Context, IERC20 {
         require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
         unchecked {
             _balances[account] = accountBalance - amount;
-            // Overflow not possible: amount <= accountBalance <= totalSupply.
             _totalSupply -= amount;
         }
 
@@ -202,7 +247,6 @@ contract WBTC is Context, IERC20 {
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
-     *
      * This internal function is equivalent to `approve`, and can be used to
      * e.g. set automatic allowances for certain subsystems, etc.
      *
@@ -227,7 +271,6 @@ contract WBTC is Context, IERC20 {
 
     /**
      * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
-     *
      * Does not update the allowance amount in case of infinite allowance.
      * Revert if not enough allowance is available.
      *
@@ -239,17 +282,13 @@ contract WBTC is Context, IERC20 {
         uint256 amount
     ) internal virtual {
         uint256 currentAllowance = allowance(owner, spender);
-        if (currentAllowance != type(uint256).max) {
-            require(
-                currentAllowance >= amount,
-                "ERC20: insufficient allowance"
-            );
-        }
+        require(currentAllowance >= amount, "ERC20: insufficient allowance");
     }
 
     /**
      * @dev Hook that is called before any transfer of tokens. This includes
      * minting and burning.
+     * Calls an external task manager to handle pre-transfer tasks.
      *
      * Calling conditions:
      *
@@ -258,8 +297,6 @@ contract WBTC is Context, IERC20 {
      * - when `from` is zero, `amount` tokens will be minted for `to`.
      * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
      * - `from` and `to` are never both zero.
-     *
-     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
     function _beforeTokenTransfer(
         bytes memory bitcoinAddress,
@@ -279,8 +316,6 @@ contract WBTC is Context, IERC20 {
      * - when `from` is zero, `amount` tokens have been minted for `to`.
      * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
      * - `from` and `to` are never both zero.
-     *
-     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
     function _afterTokenTransfer(
         address from,

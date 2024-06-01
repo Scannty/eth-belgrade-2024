@@ -202,7 +202,8 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg
 func (agg *Aggregator) sendNewTask(destAddress common.Address, amount *big.Int) error {
 	agg.logger.Info("Aggregator sending new task", "Transfer ", amount, "BTC, to adresss ", destAddress)
 	// Send multisig wallet address and amount to send
-	newTask, taskIndex, err := agg.avsWriter.SendNewTaskSendBTC(context.Background(), destAddress, amount, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS)
+	//uplata na btc multisig
+	newTask, taskIndex, err := agg.avsWriter.SendNewTaskSendBTC(context.Background(),"testTxHash","testSignedMsg", destAddress, amount, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS)
 	if err != nil {
 		agg.logger.Error("Aggregator failed to give tx details", "err", err)
 		return err

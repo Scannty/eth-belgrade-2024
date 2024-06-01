@@ -24,6 +24,8 @@ type AvsWriterer interface {
 
 	SendNewTaskSendBTC(
 		ctx context.Context,
+		txHash string,
+		signedMsg string,
 		destAddress common.Address, 
 		amount *big.Int,
 		quorumThresholdPercentage sdktypes.QuorumThresholdPercentage,
@@ -79,7 +81,7 @@ func NewAvsWriter(avsRegistryWriter avsregistry.AvsRegistryWriter, avsServiceBin
 }
 
 // returns the tx receipt, as well as the task index (which it gets from parsing the tx receipt logs)
-func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress common.Address, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
+func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, txHash string, signedMsg string, destAddress common.Address, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
 	// GET TX OPTIONS 
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
