@@ -43,6 +43,8 @@ contract IncredibleSquaringDeployer is Script, Utils {
         0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
     address public constant TASK_GENERATOR_ADDR =
         0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
+    address public constant WBTC_ADDR =
+        0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154;
 
     // ERC20 and Strategy: we need to deploy this erc20, create a strategy for it, and whitelist this strategy in the strategymanager
 
@@ -391,7 +393,8 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 incredibleSquaringPauserReg,
                 incredibleSquaringCommunityMultisig,
                 AGGREGATOR_ADDR,
-                TASK_GENERATOR_ADDR
+                TASK_GENERATOR_ADDR,
+                WBTC_ADDR
             )
         );
 

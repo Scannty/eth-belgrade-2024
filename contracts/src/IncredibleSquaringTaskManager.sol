@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin-upgrades/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
+import "./WBTC.sol";
 import "@eigenlayer/contracts/permissions/Pausable.sol";
 import "@eigenlayer-middleware/src/interfaces/IServiceManager.sol";
 import {BLSApkRegistry} from "@eigenlayer-middleware/src/BLSApkRegistry.sol";
@@ -46,6 +47,7 @@ contract IncredibleSquaringTaskManager is
 
     address public aggregator;
     address public generator;
+    address public wbtcAddress;
 
     /* MODIFIERS */
     modifier onlyAggregator() {
@@ -71,12 +73,14 @@ contract IncredibleSquaringTaskManager is
         IPauserRegistry _pauserRegistry,
         address initialOwner,
         address _aggregator,
-        address _generator
+        address _generator,
+        address _wbtc
     ) public initializer {
         _initializePauser(_pauserRegistry, UNPAUSE_ALL);
         _transferOwnership(initialOwner);
         aggregator = _aggregator;
         generator = _generator;
+        wbtcAddress = _wbtc;
     }
 
     /* FUNCTIONS */
@@ -100,10 +104,14 @@ contract IncredibleSquaringTaskManager is
         newTask.quorumThresholdPercentage = quorumThresholdPercentage;
         newTask.quorumNumbers = quorumNumbers;
 
+        WBTC(wbtcAddress).burn(msg.sender, amount);
+
         // store hash of task onchain, emit event, and increase taskNum
         allTaskHashes[latestTaskNum] = keccak256(abi.encode(newTask));
         emit NewTaskCreated(latestTaskNum, newTask);
         latestTaskNum = latestTaskNum + 1;
+
+        //Burn WBTC
     }
 
     function respondToTask(

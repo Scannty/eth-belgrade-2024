@@ -24,8 +24,6 @@ type AvsWriterer interface {
 
 	SendNewTaskSendBTC(
 		ctx context.Context,
-		txHash string,
-		signedMsg string,
 		destAddress common.Address, 
 		amount *big.Int,
 		quorumThresholdPercentage sdktypes.QuorumThresholdPercentage,
@@ -81,7 +79,7 @@ func NewAvsWriter(avsRegistryWriter avsregistry.AvsRegistryWriter, avsServiceBin
 }
 
 // returns the tx receipt, as well as the task index (which it gets from parsing the tx receipt logs)
-func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, txHash string, signedMsg string, destAddress common.Address, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
+func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress common.Address, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
 	// GET TX OPTIONS 
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
@@ -102,48 +100,47 @@ func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, txHash string, signe
 		w.logger.Errorf("Error creating mint WBTC tx")
 		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, errMint
 	}
-	receipt, errMintSend := w.TxMgr.Send(ctx, txMint)
-	fmt.Println(receipt)
+	_, errMintSend := w.TxMgr.Send(ctx, txMint)
 	if err != nil {
 		w.logger.Errorf("Error submitting WBTC tx")
 		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, errMintSend
 	}
 
-	// BURN WBTC 
-	txBurn, errBurn := wbtc.Burn(txOpts, txOpts.From, big.NewInt(100), []byte{0,4,1})
-	fmt.Println(txBurn)
-	if errBurn != nil {
-		w.logger.Errorf("Error creating burn WBTC tx")
-		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, errBurn
+	// CREATE NEW TASK
+	tx, err := w.AvsContractBindings.TaskManager.CreateNewTask(txOpts, destAddress, amount, uint32(quorumThresholdPercentage), quorumNumbers.UnderlyingType())
+	if err != nil {
+		w.logger.Errorf("Error assembling CreateNewTask tx")
+		fmt.Println(err)
+		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
 	}
+	receipt, err := w.TxMgr.Send(ctx, tx)
+	if err != nil {
+		w.logger.Errorf("Error submitting CreateNewTask tx")
+		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
+	}
+	w.logger.Error("Aggregator failed to parse new task created event", "err", receipt)
+	newTaskCreatedEvent, err := w.AvsContractBindings.TaskManager.ContractIncredibleSquaringTaskManagerFilterer.ParseNewTaskCreated(*receipt.Logs[0])
+	if err != nil {
+		w.logger.Error("Aggregator failed to parse new task cr", "err", err)
+		fmt.Println("ssss")
+		w.logger.Error("Aggregator failed to parse new task created event", "err", err)
+		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
+	}
+
+	return newTaskCreatedEvent.Task, newTaskCreatedEvent.TaskIndex, nil
+
+	// // BURN WBTC 
+	// txBurn, errBurn := wbtc.Burn(txOpts, txOpts.From, big.NewInt(100), []byte{0,4,1})
+	// if errBurn != nil {
+	// 	w.logger.Errorf("Error creating burn WBTC tx")
+	// 	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, errBurn
+	// }
 	// _, errBurnSend := w.TxMgr.Send(ctx, txBurn)
 	// if err != nil {
 	// 	w.logger.Errorf("Error submitting WBTC tx")
 	// 	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, errBurnSend
 	// }
-
-	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, nil
 }
-
-	// // CREATE NEW TASK
-	// tx, err := w.AvsContractBindings.TaskManager.CreateNewTask(txOpts, destAddress, amount, uint32(quorumThresholdPercentage), quorumNumbers.UnderlyingType())
-	// if err != nil {
-	// 	w.logger.Errorf("Error assembling CreateNewTask tx")
-	// 	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
-	// }
-	// receipt, err := w.TxMgr.Send(ctx, tx)
-	// if err != nil {
-	// 	w.logger.Errorf("Error submitting CreateNewTask tx")
-	// 	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
-	// }
-
-	// newTaskCreatedEvent, err := w.AvsContractBindings.TaskManager.ContractIncredibleSquaringTaskManagerFilterer.ParseNewTaskCreated(*receipt.Logs[0])
-	// if err != nil {
-	// 	w.logger.Error("Aggregator failed to parse new task created event", "err", err)
-	// 	return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
-	// }
-	// return newTaskCreatedEvent.Task, newTaskCreatedEvent.TaskIndex, nil
-
 
 func (w *AvsWriter) SendAggregatedResponse(
 	ctx context.Context, task cstaskmanager.IIncredibleSquaringTaskManagerTask,
