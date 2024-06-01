@@ -3,7 +3,6 @@ package operator
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -311,16 +310,20 @@ func (o *Operator) Start(ctx context.Context) error {
 func (o *Operator) ProcessNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated) *cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse {
 	o.logger.Debug("Received new task", "task", newTaskCreatedLog)
 	o.logger.Info("Received new task",
-		"numberToBeSquared", newTaskCreatedLog.Task.NumberToBeSquared,
+		"destAddress", newTaskCreatedLog.Task.DestAddress,
+		"amount", newTaskCreatedLog.Task.Amount,
 		"taskIndex", newTaskCreatedLog.TaskIndex,
 		"taskCreatedBlock", newTaskCreatedLog.Task.TaskCreatedBlock,
 		"quorumNumbers", newTaskCreatedLog.Task.QuorumNumbers,
 		"QuorumThresholdPercentage", newTaskCreatedLog.Task.QuorumThresholdPercentage,
 	)
-	numberSquared := big.NewInt(0).Exp(newTaskCreatedLog.Task.NumberToBeSquared, big.NewInt(2), nil)
+	// Sign transaction on multisig for amount to destAddress and get txHash
+	txHash := "0xExampleTxHash"
+	publicKey := "0xExamplePublicKey"
 	taskResponse := &cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse{
 		ReferenceTaskIndex: newTaskCreatedLog.TaskIndex,
-		NumberSquared:      numberSquared,
+		TxHash: common.BytesToAddress([]byte(txHash)),
+		PublicKey: common.BytesToAddress([]byte(publicKey)),
 	}
 	return taskResponse
 }

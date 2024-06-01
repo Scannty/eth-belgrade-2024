@@ -20,8 +20,12 @@ func AbiEncodeTaskResponse(h *cstaskmanager.IIncredibleSquaringTaskManagerTaskRe
 			Type: "uint32",
 		},
 		{
-			Name: "numberSquared",
-			Type: "uint256",
+			Name: "TxHash",
+			Type: "address",
+		},
+		{	
+			Name: "PublicKey",
+			Type: "address",
 		},
 	})
 	if err != nil {

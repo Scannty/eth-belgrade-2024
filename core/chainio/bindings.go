@@ -47,6 +47,7 @@ func NewAvsManagersBindings(registryCoordinatorAddr, operatorStateRetrieverAddr 
 		return nil, err
 	}
 
+
 	return &AvsManagersBindings{
 		ServiceManager: contractServiceManager,
 		TaskManager:    contractTaskManager,

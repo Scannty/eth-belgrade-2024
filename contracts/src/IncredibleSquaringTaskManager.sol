@@ -1,3 +1,4 @@
+/// @notice Ovde nam ide pravljenje i odgovaranje na taskove, u nasem slucaju taskovi su da posalje pare sa multisiga na userovu adresu
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
@@ -79,15 +80,22 @@ contract IncredibleSquaringTaskManager is
     }
 
     /* FUNCTIONS */
-    // NOTE: this function creates new task, assigns it a taskId
+    // ✅
+    /// @notice This function creates new task and assigns it a taskId
+    /// @param destAddress Destination address for sending tokens from multisig to user
+    /// @param amount Amount to be transfered to user
+    /// @param quorumThresholdPercentage The percentage of operator signatures that needs to be achieved for the task to be successful
+    /// @param quorumNumbers Number of listed quorums, for know we should fix it at zero
     function createNewTask(
-        uint256 numberToBeSquared,
+        address destAddress,
+        uint256 amount,
         uint32 quorumThresholdPercentage,
         bytes calldata quorumNumbers
     ) external onlyTaskGenerator {
         // create a new task struct
         Task memory newTask;
-        newTask.numberToBeSquared = numberToBeSquared;
+        newTask.destAddress = destAddress;
+        newTask.amount = amount;
         newTask.taskCreatedBlock = uint32(block.number);
         newTask.quorumThresholdPercentage = quorumThresholdPercentage;
         newTask.quorumNumbers = quorumNumbers;
@@ -98,7 +106,6 @@ contract IncredibleSquaringTaskManager is
         latestTaskNum = latestTaskNum + 1;
     }
 
-    // NOTE: this function responds to existing tasks.
     function respondToTask(
         Task calldata task,
         TaskResponse calldata taskResponse,
@@ -140,18 +147,18 @@ contract IncredibleSquaringTaskManager is
                 nonSignerStakesAndSignature
             );
 
-        // check that signatories own at least a threshold percentage of each quourm
-        for (uint i = 0; i < quorumNumbers.length; i++) {
-            // we don't check that the quorumThresholdPercentages are not >100 because a greater value would trivially fail the check, implying
-            // signed stake > total stake
-            require(
-                quorumStakeTotals.signedStakeForQuorum[i] *
-                    _THRESHOLD_DENOMINATOR >=
-                    quorumStakeTotals.totalStakeForQuorum[i] *
-                        uint8(quorumThresholdPercentage),
-                "Signatories do not own at least threshold percentage of a quorum"
-            );
-        }
+        // // check that signatories own at least a threshold percentage of each quourm
+        // for (uint i = 0; i < quorumNumbers.length; i++) {
+        //     // we don't check that the quorumThresholdPercentages are not >100 because a greater value would trivially fail the check, implying
+        //     // signed stake > total stake
+        //     require(
+        //         quorumStakeTotals.signedStakeForQuorum[i] *
+        //             _THRESHOLD_DENOMINATOR >=
+        //             quorumStakeTotals.totalStakeForQuorum[i] *
+        //                 uint8(quorumThresholdPercentage),
+        //         "Signatories do not own at least threshold percentage of a quorum"
+        //     );
+        // }
 
         TaskResponseMetadata memory taskResponseMetadata = TaskResponseMetadata(
             uint32(block.number),
@@ -170,6 +177,12 @@ contract IncredibleSquaringTaskManager is
         return latestTaskNum;
     }
 
+    function getTaskResponseWindowBlock() external view returns (uint32) {
+        return TASK_RESPONSE_WINDOW_BLOCK;
+    }
+}
+/*
+    // Za sada cemo da zaboravimo na ovo
     // NOTE: this function enables a challenger to raise and resolve a challenge.
     // TODO: require challenger to pay a bond for raising a challenge
     // TODO(samlaf): should we check that quorumNumbers is same as the one recorded in the task?
@@ -313,8 +326,4 @@ contract IncredibleSquaringTaskManager is
 
         emit TaskChallengedSuccessfully(referenceTaskIndex, msg.sender);
     }
-
-    function getTaskResponseWindowBlock() external view returns (uint32) {
-        return TASK_RESPONSE_WINDOW_BLOCK;
-    }
-}
+*/

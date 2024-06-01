@@ -1,3 +1,4 @@
+/// @notice Ovde nam ide slashing logic
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 

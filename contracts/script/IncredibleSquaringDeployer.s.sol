@@ -21,6 +21,7 @@ import "@eigenlayer-middleware/src/OperatorStateRetriever.sol";
 import {IncredibleSquaringServiceManager, IServiceManager} from "../src/IncredibleSquaringServiceManager.sol";
 import {IncredibleSquaringTaskManager} from "../src/IncredibleSquaringTaskManager.sol";
 import {IIncredibleSquaringTaskManager} from "../src/IIncredibleSquaringTaskManager.sol";
+import {WBTC} from "../src/WBTC.sol";
 import "../src/ERC20Mock.sol";
 
 import {Utils} from "./utils/Utils.sol";
@@ -72,6 +73,8 @@ contract IncredibleSquaringDeployer is Script, Utils {
     IncredibleSquaringTaskManager public incredibleSquaringTaskManager;
     IIncredibleSquaringTaskManager
         public incredibleSquaringTaskManagerImplementation;
+
+    WBTC public wbtc;
 
     function run() external {
         // Eigenlayer contracts
@@ -392,6 +395,9 @@ contract IncredibleSquaringDeployer is Script, Utils {
             )
         );
 
+        // Deploy WBTC Contract 
+        wbtc = new WBTC(address(incredibleSquaringTaskManager));
+
         // WRITE JSON DATA
         string memory parent_object = "parent object";
 
@@ -435,6 +441,11 @@ contract IncredibleSquaringDeployer is Script, Utils {
             deployed_addresses,
             "registryCoordinatorImplementation",
             address(registryCoordinatorImplementation)
+        );
+        vm.serializeAddress(
+            deployed_addresses,
+            "WBTC",
+            address(wbtc)
         );
         string memory deployed_addresses_output = vm.serializeAddress(
             deployed_addresses,
