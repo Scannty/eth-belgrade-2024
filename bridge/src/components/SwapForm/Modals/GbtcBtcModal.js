@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import './GbtcBtcModal.css';
+import Loader from '../../Loader'; // Ensure you have the Loader component
 
 const GbtcBtcModal = ({ modalIsOpen, setModalIsOpen, amount, btcAddress, setBtcAddress, handleBridge }) => {
   const [btcPrice, setBtcPrice] = useState(0);
   const [usdValue, setUsdValue] = useState(0);
   const [fees, setFees] = useState(0);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   useEffect(() => {
     const fetchBtcPrice = async () => {
@@ -33,6 +35,14 @@ const GbtcBtcModal = ({ modalIsOpen, setModalIsOpen, amount, btcAddress, setBtcA
     return `${Math.round(value).toLocaleString()} USD`;
   };
 
+  const handleBridgeClick = async () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+    await handleBridge(); // Call handleBridge if needed
+  };
+
   return (
     <Modal
       isOpen={modalIsOpen}
@@ -57,6 +67,7 @@ const GbtcBtcModal = ({ modalIsOpen, setModalIsOpen, amount, btcAddress, setBtcA
     >
       <div className="modal-form-container">
         <h2>Bridge GBTC to BTC</h2>
+        {loading && <Loader />}
         <div className="bridge-details">
           <div className="detail-row">
             <span className="detail-title">Amount in BTC:</span>
@@ -82,7 +93,10 @@ const GbtcBtcModal = ({ modalIsOpen, setModalIsOpen, amount, btcAddress, setBtcA
               />
             </div>
           </div>
-          <button onClick={()=>handleBridge(btcAddress)} className="connect-wallet-button">Bridge</button>
+          {loading ? (
+null          ) : (
+            <button onClick={handleBridgeClick} className="connect-wallet-button">Bridge</button>
+          )}
           <button onClick={() => setModalIsOpen(false)} className="connect-wallet-button cancel-button">Cancel</button>
         </div>
       </div>

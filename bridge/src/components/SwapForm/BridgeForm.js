@@ -84,34 +84,61 @@ const BridgeForm = () => {
       console.error('Error:', error);
     }
   };
-  const handlemint = async () => {
-
-  /*  try {
-      const response = await fetch("http://192.168.2.71:8080/mint", {
-        body: JSON.stringify({
-          destAddress: destAddress,
-          txSignature: txSignature,
-          txHash: txHash
-        }),
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  const handleMint = async () => {
+    const destAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      // Ensure the user is connected to MetaMask and has allowed access
+      if (!window.ethereum) {
+        throw new Error("MetaMask is not installed");
       }
-
-      const result = await response.json();
-      console.log(result);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-*/
-
-
-  }
+  
+      // Set up a provider (MetaMask in this case)
+      const provider = new ethers.BrowserProvider(window.ethereum);
+  
+      // Prompt user to connect their wallet
+      await provider.send("eth_requestAccounts", []);
+  
+      // Get the signer
+      const signer = await provider.getSigner();
+  
+      // Contract address and ABI
+      const contractAddress = "0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154"; // Replace with your contract address
+      const contractABI = [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "mint",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ];
+  
+      // Create a contract instance
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+      // Convert the amount to a string before parsing it to units
+      const amountString = amount.toString();
+  
+      // Call the mint function
+      const tx = await contract.mint(destAddress, ethers.parseUnits(amountString, 18));
+  
+      // Wait for the transaction to be mined
+      await tx.wait();
+  
+      console.log('Mint transaction successful:', tx);
+  
+    
+  };
+  
   const handleBridge = () => {
     if (fromToken == "GBTC") {
       alert("BURN")
@@ -193,7 +220,7 @@ const BridgeForm = () => {
           fees={fees}
           btcAddress={btcAddress}
           setBtcAddress={setBtcAddress}
-          handleBridge={handleBurn}
+          handleBridge={handleMint}
         />
       )}
       {modalType === 'BtcGbtc' && (
@@ -208,7 +235,7 @@ const BridgeForm = () => {
           setTxHash={setTxHash}
           signedTxHash={signedTxHash}
           setSignedTxHash={setSignedTxHash}
-          handleBridge={handlemint}
+          handleBridge={handleMint}
         />
       )}
     </div>

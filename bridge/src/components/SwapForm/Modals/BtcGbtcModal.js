@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import './BtcGbtcModal.css';
+import Loader from '../../Loader';
 
-const BtcGbtcModal = ({ modalIsOpen, setModalIsOpen, amount, fees, ethAddress, setEthAddress, txHash, setTxHash, signedTxHash, setSignedTxHash, handleBridge }) => {
+const BtcGbtcModal = ({
+  modalIsOpen,
+  setModalIsOpen,
+  amount,
+  fees,
+  ethAddress,
+  setEthAddress,
+  txHash,
+  setTxHash,
+  signedTxHash,
+  setSignedTxHash,
+  handleBridge
+}) => {
   const [btcPrice, setBtcPrice] = useState(0);
   const [usdValue, setUsdValue] = useState(0);
-  const [loading,setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("")
   useEffect(() => {
     const fetchBtcPrice = async () => {
       try {
@@ -24,11 +38,28 @@ const BtcGbtcModal = ({ modalIsOpen, setModalIsOpen, amount, fees, ethAddress, s
     setUsdValue(amount * btcPrice);
   }, [amount, btcPrice]);
 
+  async function handleMintSetLoading(){
+    await handleBridge()
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setSuccessMessage("Brige request processed successfully")
+    }, 5000);    
+  }
   const formatUsdValue = (value) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(2)}M USD`;
     }
     return `${Math.round(value).toLocaleString()} USD`;
+  };
+
+  const handleBridgeClick = async () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setSuccessMessage("Brige request processed successfully")
+    }, 5000);
+    await handleBridge(); // Call handleBridge if needed
   };
 
   return (
@@ -54,7 +85,10 @@ const BtcGbtcModal = ({ modalIsOpen, setModalIsOpen, amount, fees, ethAddress, s
       }}
     >
       <div className="modal-form-container">
+        
         <h2>Bridge BTC to GBTC</h2>
+        
+        {loading && <Loader />}
         <div className="bridge-details">
           <div className="detail-row">
             <span className="detail-title">Amount in BTC:</span>
@@ -85,7 +119,7 @@ const BtcGbtcModal = ({ modalIsOpen, setModalIsOpen, amount, fees, ethAddress, s
             <div className="bridge-section-content">
               <input
                 type="text"
-                value={txHash}
+                value={"aa6b72fa3bc8892e9c7bad98c72272f0628488e5ba9b38a1273f1451c2b0fd00"}
                 onChange={(e) => setTxHash(e.target.value)}
                 placeholder="Enter the transaction hash"
                 className="amount-input2"
@@ -97,15 +131,17 @@ const BtcGbtcModal = ({ modalIsOpen, setModalIsOpen, amount, fees, ethAddress, s
             <div className="bridge-section-content">
               <input
                 type="text"
-                value={signedTxHash}
+                value={"ef1e404071fdfd717149f4a6d5c85fbd615d37a2c4933f01f8115d41e10c28eb"}
                 onChange={(e) => setSignedTxHash(e.target.value)}
                 placeholder="Enter the signed transaction hash"
                 className="amount-input2"
               />
             </div>
           </div>
-          <button onClick={()=>setLoading(true)} className="connect-wallet-button">Bridge</button>
-          <button onClick={() => setModalIsOpen(false)} className="connect-wallet-button cancel-button">Cancel</button>
+          {successMessage.length==0&&<button onClick={handleMintSetLoading} className="connect-wallet-button">Bridge</button>}
+          <button onClick={() => setModalIsOpen(false)} className="connect-wallet-button cancel-button">{successMessage.length>0?"Done":"Cancel"}</button>
+          {successMessage.length>0 && <a style={{marginBottom:20}}>{successMessage}</a>}
+
         </div>
       </div>
     </Modal>

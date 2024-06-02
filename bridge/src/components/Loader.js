@@ -1,3 +1,5 @@
+import './loader.css'
+
 function Loader(){
     return(
         
