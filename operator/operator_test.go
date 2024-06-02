@@ -81,6 +81,7 @@ func TestOperator(t *testing.T) {
 		defer mockCtrl.Finish()
 
 		mockAggregatorRpcClient := operatormocks.NewMockAggregatorRpcClienter(mockCtrl)
+		fmt.Println("PUSI KURAC 2")
 		mockAggregatorRpcClient.EXPECT().SendSignedTaskResponseToAggregator(signedTaskResponse)
 		operator.aggregatorRpcClient = mockAggregatorRpcClient
 

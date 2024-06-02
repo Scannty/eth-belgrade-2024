@@ -2,12 +2,15 @@ package aggregator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients"
 	sdkclients "github.com/Layr-Labs/eigensdk-go/chainio/clients"
@@ -19,6 +22,7 @@ import (
 	"github.com/Layr-Labs/incredible-squaring-avs/core"
 	"github.com/Layr-Labs/incredible-squaring-avs/core/chainio"
 	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
+	bitcoin "github.com/Layr-Labs/incredible-squaring-avs/spremo"
 
 	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringTaskManager"
 )
@@ -77,6 +81,14 @@ type Aggregator struct {
 	taskResponsesMu       sync.RWMutex
 }
 
+type Payload struct {
+	DestAddress string `json:"destAddress"`
+	Amount      int    `json:"amount"`
+}
+type MintPayload struct {
+	DestAddress string `json:"destAddress"`
+}
+
 // NewAggregator creates a new Aggregator with the provided config.
 func NewAggregator(c *config.Config) (*Aggregator, error) {
 
@@ -120,23 +132,59 @@ func NewAggregator(c *config.Config) (*Aggregator, error) {
 	}, nil
 }
 
+/*
+{
+    "destAddress": "0x3F4bC7409A15E543F7A7578f83E8E31B847ac989",
+    "txSignature": "lol",
+    "txHash": "lol"
+}
+*/
+// agg *Aggregator;
+
+func (agg *Aggregator) postHandler(c echo.Context) error {
+	payload := new(Payload)
+
+	// Bind the JSON payload to the struct
+	if err := c.Bind(payload); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON payload"})
+	}
+
+	// Log the received payload (or process it as needed)
+	fmt.Println("Received payload:", payload.Amount, payload.DestAddress, agg)
+
+	err := agg.sendNewTask(payload.DestAddress, big.NewInt(int64(payload.Amount)))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Problem sa slanjem taska"})
+	}
+
+	// Respond with a success message
+	return c.JSON(http.StatusOK, map[string]string{"status": "success"})
+}
+
 func (agg *Aggregator) Start(ctx context.Context) error {
 	agg.logger.Infof("Starting aggregator.")
 	agg.logger.Infof("Starting aggregator rpc server.")
 	go agg.startServer(ctx)
 
-	// TODO(soubhik): refactor task generation/sending into a separate function that we can run as goroutine
-	ticker := time.NewTicker(10 * time.Second)
+	/*ticker := time.NewTicker(10 * time.Second)
 	agg.logger.Infof("Aggregator set to send new task every 10 seconds...")
 	defer ticker.Stop()
 	taskNum := int64(0)
-	exampleAddress := "0xExampleAddress"
-	exampleAddressConverted := common.BytesToAddress([]byte(exampleAddress))
-	// ticker doesn't tick immediately, so we send the first task here
-	// see https://github.com/golang/go/issues/17601
-	_ = agg.sendNewTask(exampleAddressConverted, big.NewInt(taskNum))
-	taskNum++
+	exampleAddress := "mqYT9upmDU7WGVXWk3DKcMxGZCYiMGEhGg"*/
 
+	e := echo.New()
+	e.POST("/releaseBTC", agg.postHandler)
+	// e.Logger.Fatal(e.Start(":8080"))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"}, // Allow any origin
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	}))
+
+	go func() {
+		if err := e.Start(":8080"); err != nil {
+			e.Logger.Fatal("Shutting down the server")
+		}
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -144,19 +192,20 @@ func (agg *Aggregator) Start(ctx context.Context) error {
 		case blsAggServiceResp := <-agg.blsAggregationService.GetResponseChannel():
 			agg.logger.Info("Received response from blsAggregationService", "blsAggServiceResp", blsAggServiceResp)
 			agg.sendAggregatedResponseToContract(blsAggServiceResp)
-		case <-ticker.C:
-			err := agg.sendNewTask(exampleAddressConverted, big.NewInt(taskNum))
+			/*case <-ticker.C:
+			err := agg.sendNewTask(exampleAddress, big.NewInt(1))
 			taskNum++
 			if err != nil {
 				// we log the errors inside sendNewTask() so here we just continue to the next task
 				continue
-			}
+			}*/
 		}
 	}
 }
 
 func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg.BlsAggregationServiceResponse) {
 	// TODO: check if blsAggServiceResp contains an err
+	fmt.Println("SARTC")
 	if blsAggServiceResp.Err != nil {
 		agg.logger.Error("BlsAggregationServiceResponse contains an error", "err", blsAggServiceResp.Err)
 		// panicing to help with debugging (fail fast), but we shouldn't panic if we run this in production
@@ -188,7 +237,15 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg
 	task := agg.tasks[blsAggServiceResp.TaskIndex]
 	agg.tasksMu.RUnlock()
 	agg.taskResponsesMu.RLock()
+	fmt.Println("here")
 	taskResponse := agg.taskResponses[blsAggServiceResp.TaskIndex][blsAggServiceResp.TaskResponseDigest]
+	lst := []string{}
+	for _, txSignature := range agg.taskResponses[blsAggServiceResp.TaskIndex] {
+		sign := txSignature.TxSignature
+		fmt.Println(sign)
+		lst = append(lst, sign)
+	}
+	bitcoin.SendTx(lst)
 	agg.taskResponsesMu.RUnlock()
 	_, err := agg.avsWriter.SendAggregatedResponse(context.Background(), task, taskResponse, nonSignerStakesAndSignature)
 	if err != nil {
@@ -199,7 +256,7 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg
 // OVO NAM NE TREBA OVO CE RADITI SMART CONTRACTI NASI
 // sendNewTask sends a new task to the task manager contract, and updates the Task dict struct
 // with the information of operators opted into quorum 0 at the block of task creation.
-func (agg *Aggregator) sendNewTask(destAddress common.Address, amount *big.Int) error {
+func (agg *Aggregator) sendNewTask(destAddress string, amount *big.Int) error {
 	agg.logger.Info("Aggregator sending new task", "Transfer ", amount, "BTC, to adresss ", destAddress)
 	// Send multisig wallet address and amount to send
 	newTask, taskIndex, err := agg.avsWriter.SendNewTaskSendBTC(context.Background(), destAddress, amount, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS)
@@ -208,8 +265,9 @@ func (agg *Aggregator) sendNewTask(destAddress common.Address, amount *big.Int) 
 		return err
 	}
 	agg.tasksMu.Lock()
+	fmt.Println("Task index kurac ", taskIndex)
 	agg.tasks[taskIndex] = newTask
-	agg.tasksMu.Unlock() 
+	agg.tasksMu.Unlock()
 
 	quorumThresholdPercentages := make(sdktypes.QuorumThresholdPercentages, len(newTask.QuorumNumbers))
 	for i := range newTask.QuorumNumbers {

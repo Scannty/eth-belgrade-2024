@@ -10,6 +10,7 @@ package mocks
 
 import (
 	reflect "reflect"
+	"fmt"
 
 	aggregator "github.com/Layr-Labs/incredible-squaring-avs/aggregator"
 	gomock "go.uber.org/mock/gomock"
@@ -41,11 +42,13 @@ func (m *MockAggregatorRpcClienter) EXPECT() *MockAggregatorRpcClienterMockRecor
 // SendSignedTaskResponseToAggregator mocks base method.
 func (m *MockAggregatorRpcClienter) SendSignedTaskResponseToAggregator(arg0 *aggregator.SignedTaskResponse) {
 	m.ctrl.T.Helper()
+	fmt.Println("PUSI KURAC 3")
 	m.ctrl.Call(m, "SendSignedTaskResponseToAggregator", arg0)
 }
 
 // SendSignedTaskResponseToAggregator indicates an expected call of SendSignedTaskResponseToAggregator.
 func (mr *MockAggregatorRpcClienterMockRecorder) SendSignedTaskResponseToAggregator(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
+	fmt.Println("PUSI KURAC 4")
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendSignedTaskResponseToAggregator", reflect.TypeOf((*MockAggregatorRpcClienter)(nil).SendSignedTaskResponseToAggregator), arg0)
 }

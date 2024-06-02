@@ -1,0 +1,12 @@
+Ako menjam kontrakte
+deploy-all-to-anvil-and-save-state
+make bindings
+
+Pokretanje: 
+start-anvil-chain-with-el-and-avs-deployed
+operator
+agregator
+
+2001
+
+poneti mek i punjac na hakaton

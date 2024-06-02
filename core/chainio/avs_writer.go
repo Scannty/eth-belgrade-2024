@@ -24,7 +24,7 @@ type AvsWriterer interface {
 
 	SendNewTaskSendBTC(
 		ctx context.Context,
-		destAddress common.Address, 
+		destAddress string,
 		amount *big.Int,
 		quorumThresholdPercentage sdktypes.QuorumThresholdPercentage,
 		quorumNumbers sdktypes.QuorumNums,
@@ -79,8 +79,8 @@ func NewAvsWriter(avsRegistryWriter avsregistry.AvsRegistryWriter, avsServiceBin
 }
 
 // returns the tx receipt, as well as the task index (which it gets from parsing the tx receipt logs)
-func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress common.Address, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
-	// GET TX OPTIONS 
+func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress string, amount *big.Int, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
+	// GET TX OPTIONS
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
 		w.logger.Errorf("Error getting tx opts")
@@ -118,7 +118,7 @@ func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress common.A
 		w.logger.Errorf("Error submitting CreateNewTask tx")
 		return cstaskmanager.IIncredibleSquaringTaskManagerTask{}, 0, err
 	}
-	w.logger.Error("Aggregator failed to parse new task created event", "err", receipt)
+	//w.logger.Error("Aggregator failed to parse new task created event", "err", receipt)
 	newTaskCreatedEvent, err := w.AvsContractBindings.TaskManager.ContractIncredibleSquaringTaskManagerFilterer.ParseNewTaskCreated(*receipt.Logs[0])
 	if err != nil {
 		w.logger.Error("Aggregator failed to parse new task cr", "err", err)
@@ -129,7 +129,7 @@ func (w *AvsWriter) SendNewTaskSendBTC(ctx context.Context, destAddress common.A
 
 	return newTaskCreatedEvent.Task, newTaskCreatedEvent.TaskIndex, nil
 
-	// // BURN WBTC 
+	// // BURN WBTC
 	// txBurn, errBurn := wbtc.Burn(txOpts, txOpts.From, big.NewInt(100), []byte{0,4,1})
 	// if errBurn != nil {
 	// 	w.logger.Errorf("Error creating burn WBTC tx")

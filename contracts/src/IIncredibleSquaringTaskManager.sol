@@ -26,7 +26,7 @@ interface IIncredibleSquaringTaskManager {
 
     // STRUCTS
     struct Task {
-        address destAddress;
+        string destAddress;
         uint256 amount;
         uint32 taskCreatedBlock;
         // task submitter decides on the criteria for a task to be completed
@@ -45,8 +45,7 @@ interface IIncredibleSquaringTaskManager {
         // Can be obtained by the operator from the event NewTaskCreated.
         uint32 referenceTaskIndex;
         // This is just the response that the operator has to compute by itself.
-        address txHash;
-        address publicKey;
+        string TxSignature;
     }
 
     // Extra information related to taskResponse, which is filled inside the contract.
@@ -60,7 +59,7 @@ interface IIncredibleSquaringTaskManager {
     // FUNCTIONS
     // NOTE: this function creates new task.
     function createNewTask(
-        address destAddress,
+        string calldata destAddress,
         uint256 amount,
         uint32 quorumThresholdPercentage,
         bytes calldata quorumNumbers
